@@ -20,6 +20,7 @@ get.query.data <- function(filename=NULL, query_id=NULL, path="project_data", fo
   if(remove.old & length(old.files) != 0) file.remove(paste0(path, "/", old.files))
   return(query.data)
 }
+
 get_fts <- function(year = NULL, planid = NULL, emergencyid = NULL, globalclusterid = NULL, destinationlocationid = NULL){
   lapply(c("data.table", "jsonlite"), require, character.only=T)
   if(!is.null(year)){
@@ -61,6 +62,7 @@ get_fts <- function(year = NULL, planid = NULL, emergencyid = NULL, globalcluste
   flows <- rbindlist(flowslist, fill=T, use.names = T)
   return(flows)
 }
+
 unnest_fts <- function(fts, cols = c("sourceObjects", "destinationObjects"), splits = "type", remove.nested = T, group.same = T){
   require(data.table)
   if(length(cols) != length(splits) & length(splits) != 1) stop("There must be one split for each nested col, or a single common split for all nested cols.", call.=F)
@@ -85,6 +87,7 @@ unnest_fts <- function(fts, cols = c("sourceObjects", "destinationObjects"), spl
   }
   return(fts)
 }
+
 split_rows <- function(data, value.cols = "amountUSD", split.cols = "destinationObjects_Location.name", split.pattern = ";", remove.unsplit = T){
   split.pattern <- trimws(split.pattern)
   temp <- data[, .(trimws(unlist(strsplit(get(split.cols), split.pattern))), get(value.cols)/(1+nchar(get(split.cols))-nchar(gsub(split.pattern, "", get(split.cols))))), by=rownames(data)]
@@ -98,18 +101,42 @@ split_rows <- function(data, value.cols = "amountUSD", split.cols = "destination
   return(data)
 }
 
+split_iati <- function(iati, cols = c("sectors", "countries_regions")){
+  require(data.table)
+  for(col in cols){
+    message("Splitting ",col, "...")
+    temp <- iati[, .(trimws(unlist(strsplit(get(col), "[}], [{]")))), by=rownames(iati)]
+    temp <- temp[, tstrsplit(V1, ", "), by = rownames]
+    colsplitnames <- c("rownames", paste0(col, "_", gsub(":.*|[[{]|'", "", temp[1, -1])))
+    temp <- data.table(temp[, apply(.SD, 2, function(x) trimws(gsub(".*:|[}]]|'", "", x)))])
+    setnames(temp, colsplitnames)
+    iati <- merge(iati[, rownames := rownames(iati)], temp, by = "rownames")
+    iati$rownames <- NULL
+  }
+  percentagenames <- grep("_percentage$", names(iati), value = T)
+  iati[, split_value_USD := as.numeric(value_USD) * apply(apply(.SD, 2, function(x) as.numeric(x))/100, 1, prod), .SDcols = (percentagenames)]
+}
+
 temp <- tempfile(fileext = ".xlsx")
 download.file("https://github.com/markbrough/covid19-data/raw/gh-pages/traceability/transactions.xlsx", "project_data/transactions.xlsx", mode = 'wb')
 
-iati <- data.table(read_xlsx("project_data/transactions.xlsx"))
+iati <- data.table(read_xlsx("project_data/transactions.xlsx", col_types = "text"))
+iati <- split_iati(iati, cols = c("sectors", "countries_regions"))
+iati.names <- fread("project_data/iatidonors.csv", header = T)
+
+iati <- merge(iati, iati.names, by.x = "provider_text", by.y = "IATI_provider", all.x = T)
 
 fts.2020 <- unnest_fts(get_fts(year = 2020))
 fts.codes <- get.query.data("FTS_ISO", 651)
 fts.codes$`Country code` <- as.character(fts.codes$`Country code`)
 
-fts.2020[grepl(911, sourceObjects_Emergency.id)|grepl(911, destinationObjects_Emergency.id)|
-           grepl(26513, sourceObjects_GlobalCluster.id)|grepl(26513, destinationObjects_GlobalCluster.id)|
-           grepl(952, sourceObjects_Plan.id)|grepl(952, destinationObjects_Plan.id), covid := TRUE]
+fts.2020[
+    grepl(911, sourceObjects_Emergency.id)|grepl(911, destinationObjects_Emergency.id)
+  | 
+    grepl(26513, sourceObjects_GlobalCluster.id)|grepl(26513, destinationObjects_GlobalCluster.id)
+  | 
+    grepl(952, sourceObjects_Plan.id)|grepl(952, destinationObjects_Plan.id)
+         , covid := TRUE]
 
 fts.2020 <- split_rows(fts.2020, value.cols = "amountUSD", split.cols = "destinationObjects_Location.id", split.pattern = ";", remove.unsplit = T)
 
@@ -119,9 +146,29 @@ isos[iso2c == "KP"] <- "PRK"
 isos[iso2c == "ZG"] <- "ZGX"
 isos[iso2c == "ZJ"] <- "ZJX"
 
+fts.2020$FTS_name <- gsub(", Government of", "", fts.2020$sourceObjects_Organization.name)
 fts.2020 <- merge(fts.2020, isos, by.x = "ISO Alpha 3", by.y = "iso3c", all.x = T)
 
-iati$transaction_type_fts <- ifelse(iati$transaction_type_code %in% c(3, 4), "paid", ifelse(iati$transaction_type_code == 2, "commitment", "other"))
+fts.pairs <- unique(paste0(fts.2020$FTS_name, fts.2020$iso2c))
 
-dcast(iati[transaction_type_fts != "other"], reporting_org_text ~ transaction_type_fts, value.var = "value_USD", fun.aggregate = sum)
-test <- dcast(fts.2020, sourceObjects_Organization.name ~ status, value.var = "amountUSD.split", fun.aggregate = sum)
+iati$transaction_type_fts <- ifelse(iati$transaction_type_code %in% c(3), "paid", ifelse(iati$transaction_type_code == 2, "commitment", "other"))
+iati[, humanitarian_fixed := ifelse(humanitarian %in% c("1", "true") | grepl("720", sectors_code), ifelse(paste0(FTS_name, countries_regions_code) %in% fts.pairs, "humanitarian_in_FTS", "humanitarian_in_IATI"), "development"), by = `...1`]
+
+iati.donor.cast <- dcast(iati[transaction_type_fts != "other" & finance_type == 110 & covid_relevant %in% c("MAYBE", "YES") & as.Date(transaction_date) > as.Date("2020-01-01")], FTS_name ~ humanitarian_fixed, value.var = "split_value_USD", fun.aggregate = function(x) sum(x, na.rm = T))
+fts.donor.cast <- dcast(fts.2020[covid == T], FTS_name ~ ., value.var = "amountUSD.split", fun.aggregate = function(x) sum(x, na.rm = T))
+
+#setnames(iati.donor.cast, c("FTS_name", paste0("development", names(iati.donor.cast)[-1])))
+setnames(fts.donor.cast, c("FTS_name", "humanitarian"))
+
+all.donor.cast <- merge(iati.donor.cast, fts.donor.cast, by = "FTS_name", all = T)
+fwrite(all.donor.cast, "output/all_donors.csv")
+
+iati.recipient.cast <- dcast(iati[transaction_type_fts != "other" & finance_type == 110 & covid_relevant %in% c("MAYBE", "YES")], countries_regions_code ~ humanitarian_fixed, value.var = "split_value_USD", fun.aggregate = function(x) sum(x, na.rm = T))
+fts.recipient.cast <- dcast(fts.2020[covid == T], iso2c + `Country name` ~ ., value.var = "amountUSD.split", fun.aggregate = function(x) sum(x, na.rm = T))
+
+#setnames(iati.recipient.cast, c("iso2c", paste0("development", names(iati.recipient.cast)[-1])))
+setnames(fts.recipient.cast, c("iso2c", "Country_name", "humanitarian"))
+
+all.recipient.cast <- merge(iati.recipient.cast, fts.recipient.cast, by.x = "countries_regions_code", by.y = "iso2c", all = T)
+all.recipient.cast <- all.recipient.cast[,c("countries_regions_code", "Country_name", "development", "humanitarian_in_FTS", "humanitarian_in_IATI", "humanitarian")]
+fwrite(all.recipient.cast, "output/all_recipients.csv")
