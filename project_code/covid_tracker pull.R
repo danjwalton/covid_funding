@@ -138,9 +138,11 @@ fts.2020[
     grepl(952, sourceObjects_Plan.id)|grepl(952, destinationObjects_Plan.id)
          , covid := TRUE]
 
-fts.2020 <- split_rows(fts.2020, value.cols = "amountUSD", split.cols = "destinationObjects_Location.id", split.pattern = ";", remove.unsplit = T)
+fts.2020[grepl(952, sourceObjects_Plan.id)|grepl(952, destinationObjects_Plan.id), ghrp := TRUE]
 
-fts.2020 <- merge(fts.2020, fts.codes, by.x = "destinationObjects_Location.id.split", by.y = "Country code", all.x=T)
+fts.2020.split <- split_rows(fts.2020, value.cols = "amountUSD", split.cols = "destinationObjects_Location.id", split.pattern = ";", remove.unsplit = T)
+
+fts.2020 <- merge(fts.2020, fts.codes, by.x = "destinationObjects_Location.id", by.y = "Country code", all.x=T)
 isos <- as.data.table(WDI(indicator = "NY.GDP.PCAP.KD", start=2019, end=2019, extra=T)[, c("iso2c", "iso3c")])
 isos[iso2c == "KP"] <- "PRK"
 isos[iso2c == "ZG"] <- "ZGX"
@@ -155,20 +157,79 @@ iati$transaction_type_fts <- ifelse(iati$transaction_type_code %in% c(3), "paid"
 iati[, humanitarian_fixed := ifelse(humanitarian %in% c("1", "true") | grepl("720", sectors_code), ifelse(paste0(FTS_name, countries_regions_code) %in% fts.pairs, "humanitarian_in_FTS", "humanitarian_in_IATI"), "development"), by = `...1`]
 
 iati.donor.cast <- dcast(iati[transaction_type_fts != "other" & finance_type == 110 & covid_relevant %in% c("MAYBE", "YES") & as.Date(transaction_date) > as.Date("2020-01-01")], FTS_name ~ humanitarian_fixed, value.var = "split_value_USD", fun.aggregate = function(x) sum(x, na.rm = T))
-fts.donor.cast <- dcast(fts.2020[covid == T], FTS_name ~ ., value.var = "amountUSD.split", fun.aggregate = function(x) sum(x, na.rm = T))
 
+fts.donor.cast <- dcast(fts.2020[covid == T], FTS_name ~ status, value.var = "amountUSD", fun.aggregate = function(x) sum(x, na.rm = T)) #outgoing flows by organisation
+fts.donor.cast.inc <- dcast(fts.2020[covid == T], destinationObjects_Organization.name ~ status, value.var = "amountUSD", fun.aggregate = function(x) -sum(x, na.rm = T)) #incoming flows by organisations
+
+fts.donor.cast <- merge(fts.donor.cast, fts.donor.cast.inc, by.x = "FTS_name", by.y = "destinationObjects_Organization.name", all.x = T)
+
+fts.donor.cast <- fts.donor.cast[, .(commitment = sum(commitment.x, commitment.y, na.rm = T), paid = sum(paid.x, paid.y, na.rm = T), pledge = sum(pledge.x, pledge.y, na.rm = T)), by = FTS_name] #estimate first-level flows only
+fwrite(fts.donor.cast, "output/fts_donors.csv")
 #setnames(iati.donor.cast, c("FTS_name", paste0("development", names(iati.donor.cast)[-1])))
 setnames(fts.donor.cast, c("FTS_name", "humanitarian"))
 
 all.donor.cast <- merge(iati.donor.cast, fts.donor.cast, by = "FTS_name", all = T)
 fwrite(all.donor.cast, "output/all_donors.csv")
 
-iati.recipient.cast <- dcast(iati[transaction_type_fts != "other" & finance_type == 110 & covid_relevant %in% c("MAYBE", "YES")], countries_regions_code ~ humanitarian_fixed, value.var = "split_value_USD", fun.aggregate = function(x) sum(x, na.rm = T))
-fts.recipient.cast <- dcast(fts.2020[covid == T], iso2c + `Country name` ~ ., value.var = "amountUSD.split", fun.aggregate = function(x) sum(x, na.rm = T))
+iati.recipient.cast <- dcast(iati[transaction_type_fts != "other" & finance_type == 110 & covid_relevant %in% c("MAYBE", "YES") & as.Date(transaction_date) > as.Date("2020-01-01")], countries_regions_code ~ humanitarian_fixed, value.var = "split_value_USD", fun.aggregate = function(x) sum(x, na.rm = T))
+fts.recipient.cast <- dcast(fts.2020[covid == T], iso2c + `Country name` ~ ., value.var = "amountUSD", fun.aggregate = function(x) sum(as.numeric(x), na.rm = T))
 
+fwrite(fts.recipient.cast, "output/fts_recipients.csv")
 #setnames(iati.recipient.cast, c("iso2c", paste0("development", names(iati.recipient.cast)[-1])))
 setnames(fts.recipient.cast, c("iso2c", "Country_name", "humanitarian"))
 
 all.recipient.cast <- merge(iati.recipient.cast, fts.recipient.cast, by.x = "countries_regions_code", by.y = "iso2c", all = T)
 all.recipient.cast <- all.recipient.cast[,c("countries_regions_code", "Country_name", "development", "humanitarian_in_FTS", "humanitarian_in_IATI", "humanitarian")]
 fwrite(all.recipient.cast, "output/all_recipients.csv")
+
+iati.date.cast <- dcast(iati[transaction_type_fts != "other" & finance_type == 110 & covid_relevant %in% c("MAYBE", "YES") & as.Date(transaction_date) > as.Date("2020-01-01")], as.Date(transaction_date) ~ humanitarian_fixed, value.var = "split_value_USD", fun.aggregate = function(x) sum(x, na.rm = T))
+fts.date.cast <- dcast(fts.2020[covid == T], as.Date(date) ~ ., value.var = "amountUSD", fun.aggregate = function(x) sum(x, na.rm = T))
+
+setnames(fts.date.cast, c("transaction_date", "humanitarian"))
+
+all.date.cast <- merge(iati.date.cast, fts.date.cast, all = T)
+all.date.cast[is.na(all.date.cast)] <- 0
+
+all.date.cast[,c(2:5)] <- data.table(sapply(all.date.cast[,c(2:5)], cumsum))
+
+fwrite(all.date.cast, "output/all_dates.csv")
+
+iati$org_type <- "Other"
+iati[receiver_type >= 10]$org_type <- "Government"
+iati[receiver_type >= 20]$org_type <- "NGO"
+iati[receiver_type >= 30]$org_type <- "PPP"
+iati[receiver_type >= 40]$org_type <- "Multilateral"
+iati[receiver_type >= 60]$org_type <- "Private organization/foundation"
+iati[receiver_type >= 80]$org_type <- "Other"
+
+iati.types.cast <- dcast(iati[transaction_type_fts != "other" & finance_type == 110 & covid_relevant %in% c("MAYBE", "YES") & as.Date(transaction_date) > as.Date("2020-01-01")], org_type ~ humanitarian_fixed, value.var = "split_value_USD", fun.aggregate = function(x) sum(x, na.rm = T))
+
+fts.2020$org_type <- fts.2020$destinationObjects_Organization.organizationTypes
+fts.2020[!(destinationObjects_Organization.organizationTypes %in% iati.types.cast$org_type)]$org_type <- "Multilateral"
+fts.2020[is.na(destinationObjects_Organization.organizationTypes)]$org_type <- "Other"
+fts.2020[destinationObjects_Organization.organizationTypes == "Inter-governmental"]$org_type <- "Government"
+
+fts.types.cast <- dcast(fts.2020[covid == T], org_type ~ ., value.var = "amountUSD", fun.aggregate = function(x) sum(x, na.rm = T))
+
+setnames(fts.types.cast, ".", "humanitarian")
+
+all.types.cast <- merge(iati.types.cast, fts.types.cast)
+fwrite(all.types.cast, "output/all_types.csv")
+
+iati.recipients.ngos.cast <- dcast(iati[org_type == "NGO" & transaction_type_fts != "other" & finance_type == 110 & covid_relevant %in% c("MAYBE", "YES") & as.Date(transaction_date) > as.Date("2020-01-01")], countries_regions_code ~ humanitarian_fixed, value.var = "split_value_USD", fun.aggregate = function(x) sum(x, na.rm = T))
+fts.recipients.ngos.cast <- dcast(fts.2020[org_type == "NGO" & covid == T], iso2c + `Country name` ~ ., value.var = "amountUSD", fun.aggregate = function(x) sum(x, na.rm = T))
+
+setnames(fts.recipients.ngos.cast, c("iso2c", "Country_name", "humanitarian"))
+
+all.recipients.ngos.cast <- merge(iati.recipients.ngos.cast, fts.recipients.ngos.cast, by.x = "countries_regions_code", by.y = "iso2c", all = T)
+all.recipients.ngos.cast <- all.recipients.ngos.cast[,c("countries_regions_code", "Country_name", "development", "humanitarian_in_FTS", "humanitarian_in_IATI", "humanitarian")]
+fwrite(all.recipients.ngos.cast, "output/all_recipients_ngos.csv")
+
+iati.donors.ngos.cast <- dcast(iati[org_type == "NGO" & transaction_type_fts != "other" & finance_type == 110 & covid_relevant %in% c("MAYBE", "YES") & as.Date(transaction_date) > as.Date("2020-01-01")], FTS_name ~ humanitarian_fixed, value.var = "split_value_USD", fun.aggregate = function(x) sum(x, na.rm = T))
+fts.donors.ngos.cast <- dcast(fts.2020[org_type == "NGO" & covid == T], FTS_name ~ ., value.var = "amountUSD", fun.aggregate = function(x) sum(x, na.rm = T))
+
+setnames(fts.donors.ngos.cast, c("FTS_name", "humanitarian"))
+
+all.donors.ngos.cast <- merge(iati.donors.ngos.cast, fts.donors.ngos.cast, all = T)
+fwrite(all.donors.ngos.cast, "output/all_donors_ngos.csv")
+

@@ -1,0 +1,217 @@
+Country code,Country name,ISO Alpha 3
+25724802,Serbia and Montenegro (until 2006-2009),""
+13,Aruba,ABW
+1,Afghanistan,AFG
+7,Angola,AGO
+8,Anguilla (United Kingdom),AIA
+3,Albania,ALB
+6,Andorra,AND
+235,United Arab Emirates,ARE
+11,Argentina,ARG
+12,Armenia,ARM
+10,Antigua and Barbuda,ATG
+14,Australia,AUS
+15,Austria,AUT
+16,Azerbaijan,AZE
+37,Burundi,BDI
+22,Belgium,BEL
+24,Benin,BEN
+36,Burkina Faso,BFA
+19,Bangladesh,BGD
+35,Bulgaria,BGR
+18,Bahrain,BHR
+17,Bahamas,BHS
+28,Bosnia and Herzegovina,BIH
+21,Belarus,BLR
+23,Belize,BLZ
+27,"Bolivia, Plurinational State of",BOL
+32,Brazil,BRA
+20,Barbados,BRB
+34,Brunei Darussalam,BRN
+26,Bhutan,BTN
+30,Botswana,BWA
+43,Central African Republic,CAF
+40,Canada,CAN
+217,Switzerland,CHE
+45,Chile,CHL
+46,China,CHN
+55,Côte d'Ivoire,CIV
+39,Cameroon,CMR
+52,"Congo, The Democratic Republic of the",COD
+51,Congo,COG
+53,Cook Islands,COK
+49,Colombia,COL
+50,Comoros,COM
+41,Cape Verde,CPV
+54,Costa Rica,CRI
+57,Cuba,CUB
+58,Curaçao,CUW
+42,Cayman Islands,CYM
+59,Cyprus,CYP
+60,Czech Republic,CZE
+83,Germany,DEU
+62,Djibouti,DJI
+63,Dominica,DMA
+61,Denmark,DNK
+64,Dominican Republic,DOM
+4,Algeria,DZA
+65,Ecuador,ECU
+66,Egypt,EGY
+69,Eritrea,ERI
+247,Western Sahara,ESH
+209,Spain,ESP
+70,Estonia,EST
+71,Ethiopia,ETH
+75,Finland,FIN
+74,Fiji,FJI
+76,France,FRA
+73,Faroe Islands,FRO
+145,"Micronesia, Federated States of",FSM
+80,Gabon,GAB
+236,United Kingdom,GBR
+82,Georgia,GEO
+84,Ghana,GHA
+93,Guinea,GIN
+81,Gambia,GMB
+94,Guinea-Bissau,GNB
+68,Equatorial Guinea,GNQ
+86,Greece,GRC
+88,Grenada,GRD
+91,Guatemala,GTM
+90,Guam,GUM
+95,Guyana,GUY
+99,Honduras,HND
+56,Croatia,HRV
+96,Haiti,HTI
+101,Hungary,HUN
+104,Indonesia,IDN
+103,India,IND
+107,Ireland,IRL
+105,"Iran, Islamic Republic of",IRN
+106,Iraq,IRQ
+102,Iceland,ISL
+109,Israel,ISR
+110,Italy,ITA
+111,Jamaica,JAM
+113,Jersey,JEY
+114,Jordan,JOR
+112,Japan,JPN
+115,Kazakhstan,KAZ
+116,Kenya,KEN
+121,Kyrgyzstan,KGZ
+38,Cambodia,KHM
+117,Kiribati,KIR
+188,Saint Kitts and Nevis,KNA
+119,"Korea, Republic of",KOR
+120,Kuwait,KWT
+122,Lao People's Democratic Republic,LAO
+124,Lebanon,LBN
+126,Liberia,LBR
+127,Libya,LBY
+189,Saint Lucia,LCA
+128,Liechtenstein,LIE
+210,Sri Lanka,LKA
+125,Lesotho,LSO
+129,Lithuania,LTU
+130,Luxembourg,LUX
+123,Latvia,LVA
+190,Saint Martin (France),MAF
+151,Morocco,MAR
+147,Monaco,MCO
+146,"Moldova, Republic of",MDA
+133,Madagascar,MDG
+136,Maldives,MDV
+144,Mexico,MEX
+139,Marshall Islands,MHL
+132,"North Macedonia, Republic of",MKD
+137,Mali,MLI
+138,Malta,MLT
+153,Myanmar,MMR
+149,Montenegro,MNE
+148,Mongolia,MNG
+152,Mozambique,MOZ
+141,Mauritania,MRT
+150,Montserrat,MSR
+142,Mauritius,MUS
+134,Malawi,MWI
+135,Malaysia,MYS
+154,Namibia,NAM
+159,New Caledonia,NCL
+162,Niger,NER
+163,Nigeria,NGA
+161,Nicaragua,NIC
+164,Niue,NIU
+157,Netherlands,NLD
+167,Norway,NOR
+156,Nepal,NPL
+155,Nauru,NRU
+160,New Zealand,NZL
+168,Oman,OMN
+169,Pakistan,PAK
+172,Panama,PAN
+175,Peru,PER
+176,Philippines,PHL
+170,Palau,PLW
+173,Papua New Guinea,PNG
+178,Poland,POL
+180,Puerto Rico (United States),PRI
+118,"Korea, Democratic People's Republic of",PRK
+179,Portugal,PRT
+174,Paraguay,PRY
+171,occupied Palestinian territory,PSE
+78,French Polynesia,PYF
+181,Qatar,QAT
+182,Réunion,REU
+183,Romania,ROU
+184,Russian Federation,RUS
+185,Rwanda,RWA
+196,Saudi Arabia,SAU
+212,Sudan,SDN
+197,Senegal,SEN
+201,Singapore,SGP
+187,"Saint Helena, Ascension and Tristan da Cunha",SHN
+205,Solomon Islands,SLB
+200,Sierra Leone,SLE
+67,El Salvador,SLV
+194,San Marino,SMR
+206,Somalia,SOM
+198,Serbia,SRB
+211,South Sudan,SSD
+195,São Tomé and Príncipe,STP
+213,Suriname,SUR
+203,Slovakia,SVK
+204,Slovenia,SVN
+216,Sweden,SWE
+215,Eswatini,SWZ
+202,Sint Maarten (Dutch part),SXM
+199,Seychelles,SYC
+218,Syrian Arab Republic,SYR
+231,Turks and Caicos Islands,TCA
+44,Chad,TCD
+224,Togo,TGO
+222,Thailand,THA
+220,Tajikistan,TJK
+230,Turkmenistan,TKM
+223,Timor-Leste,TLS
+226,Tonga,TON
+227,Trinidad and Tobago,TTO
+228,Tunisia,TUN
+229,Turkey,TUR
+232,Tuvalu,TUV
+221,"Tanzania, United Republic of",TZA
+233,Uganda,UGA
+234,Ukraine,UKR
+239,Uruguay,URY
+237,United States,USA
+240,Uzbekistan,UZB
+98,Holy See (Vatican City State),VAT
+192,Saint Vincent and the Grenadines,VCT
+242,"Venezuela, Bolivarian Republic of",VEN
+244,"Virgin Islands, British",VIR
+243,Viet Nam,VNM
+241,Vanuatu,VUT
+193,Samoa,WSM
+248,Yemen,YEM
+207,South Africa,ZAF
+249,Zambia,ZMB
+250,Zimbabwe,ZWE
